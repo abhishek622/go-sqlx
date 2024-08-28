@@ -18,18 +18,25 @@ func NewMySQLStorer(db *sqlx.DB) *MySQLStorer {
 }
 
 func (ms *MySQLStorer) CreateProduct(ctx context.Context, p *Product) (*Product, error) {
-	res, err := ms.db.NamedExecContext(ctx, "INSERT INTO products (name, image, category, description,rating, num_reviews, price, count_in_stock) VALUES (:name, :image, :category, :description, :rating, :num_reviews, :price, :count_in_stock)", p)
+	err := ms.execTx(ctx, func(tx *sqlx.Tx) error {
+		res, err := tx.NamedExecContext(ctx, "INSERT INTO products (name, image, category, description,rating, num_reviews, price, count_in_stock) VALUES (:name, :image, :category, :description, :rating, :num_reviews, :price, :count_in_stock)", p)
 
+		if err != nil {
+			return fmt.Errorf("Error while adding product: %w", err)
+		}
+
+		id, err := res.LastInsertId()
+		if err != nil {
+			return fmt.Errorf("Error getting last insert ID: %w", err)
+		}
+
+		p.ID = id
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("Error while adding product: %w", err)
+		return nil, fmt.Errorf("Error creating product: %w", err)
 	}
 
-	id, err := res.LastInsertId()
-	if err != nil {
-		return nil, fmt.Errorf("Error getting last insert ID: %w", err)
-	}
-
-	p.ID = id
 	return p, nil
 }
 
@@ -69,7 +76,14 @@ func (ms *MySQLStorer) UpdateProduct(ctx context.Context, p *Product) (*Product,
 }
 
 func (ms *MySQLStorer) DeleteProduct(ctx context.Context, id int64) error {
-	_, err := ms.db.ExecContext(ctx, "DELETE FROM products WHERE id=?", id)
+	err := ms.execTx(ctx, func(tx *sqlx.Tx) error {
+		_, err := tx.ExecContext(ctx, "DELETE FROM products WHERE id=?", id)
+		if err != nil {
+			return fmt.Errorf("Error deleting product items: %w", err)
+		}
+
+		return nil
+	})
 	if err != nil {
 		return fmt.Errorf("Error while deleting product: %w", err)
 	}
@@ -149,7 +163,6 @@ func (ms *MySQLStorer) GetOrder(ctx context.Context, id int64) (*Order, error) {
 
 	o.Items = items
 	return &o, nil
-
 }
 
 func (ms *MySQLStorer) ListOrders(ctx context.Context) ([]Order, error) {
@@ -186,6 +199,90 @@ func (ms *MySQLStorer) DeleteOrder(ctx context.Context, id int64) error {
 	})
 	if err != nil {
 		return fmt.Errorf("Error while deleting order: %w", err)
+	}
+
+	return nil
+}
+
+// user
+func (ms *MySQLStorer) CreateUser(ctx context.Context, u *User) (*User, error) {
+	err := ms.execTx(ctx, func(tx *sqlx.Tx) error {
+		res, err := tx.NamedExecContext(ctx, "INSERT INTO products (name, email, password, is_admin) VALUES (:name, :email, :password, :is_admin)", u)
+
+		if err != nil {
+			return fmt.Errorf("Error while adding product: %w", err)
+		}
+
+		id, err := res.LastInsertId()
+		if err != nil {
+			return fmt.Errorf("Error getting last insert ID: %w", err)
+		}
+
+		u.ID = id
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Error creating user: %w", err)
+	}
+
+	return u, nil
+}
+
+func (ms *MySQLStorer) GetUser(ctx context.Context, email string) (*User, error) {
+	var u User
+	err := ms.db.GetContext(ctx, &u, "SELECT * FROM users where email=?", email)
+	if err != nil {
+		return nil, fmt.Errorf("Error getting user: %w", err)
+	}
+
+	return &u, nil
+}
+func (ms *MySQLStorer) GetUserById(ctx context.Context, id int64) (*User, error) {
+	var u User
+	err := ms.db.GetContext(ctx, &u, "SELECT * FROM users where id=?", id)
+	if err != nil {
+		return nil, fmt.Errorf("Error getting user: %w", err)
+	}
+
+	return &u, nil
+}
+
+func (ms *MySQLStorer) ListUsers(ctx context.Context) ([]User, error) {
+	var users []User
+	err := ms.db.SelectContext(ctx, &users, "SELECT * FROM users")
+	if err != nil {
+		return nil, fmt.Errorf("Error listing users: %w", err)
+	}
+
+	return users, nil
+}
+
+func (ms *MySQLStorer) UpdateUser(ctx context.Context, u *User) (*User, error) {
+	err := ms.execTx(ctx, func(tx *sqlx.Tx) error {
+		_, err := tx.NamedExecContext(ctx, "UPDATE users SET name=:name, email=:email, password=:password, is_admin=:is_admin, updated_at=:updated_at WHERE id=:id", u)
+		if err != nil {
+			return fmt.Errorf("error updating user: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Error while updating user: %w", err)
+	}
+
+	return u, nil
+}
+
+func (ms *MySQLStorer) DeleteUser(ctx context.Context, id int64) error {
+	err := ms.execTx(ctx, func(tx *sqlx.Tx) error {
+		_, err := tx.ExecContext(ctx, "DELETE FROM users WHERE id=?", id)
+		if err != nil {
+			return fmt.Errorf("Error deleting user items: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("Error while deleting user: %w", err)
 	}
 
 	return nil

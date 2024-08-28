@@ -135,6 +135,69 @@ func (h *handler) deleteProduct(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func toStoreProduct(p ProductReq) *storer.Product {
+	return &storer.Product{
+		Name:         p.Name,
+		Image:        p.Image,
+		Category:     p.Category,
+		Description:  p.Description,
+		Rating:       p.Rating,
+		NumReviews:   p.NumReviews,
+		Price:        p.Price,
+		CountInStock: p.CountInStock,
+	}
+}
+
+func toProductRes(p *storer.Product) ProductRes {
+	return ProductRes{
+		ID:           p.ID,
+		Name:         p.Name,
+		Image:        p.Image,
+		Category:     p.Category,
+		Description:  p.Description,
+		Rating:       p.Rating,
+		NumReviews:   p.NumReviews,
+		Price:        p.Price,
+		CountInStock: p.CountInStock,
+		CreatedAt:    p.CreatedAt,
+		UpdatedAt:    p.UpdatedAt,
+	}
+}
+
+func patchProductReq(product *storer.Product, p ProductReq) {
+	if p.Name != "" {
+		product.Name = p.Name
+	}
+	if p.Image != "" {
+		product.Image = p.Image
+	}
+	if p.Category != "" {
+		product.Category = p.Category
+	}
+	if p.Description != "" {
+		product.Description = p.Description
+	}
+	if p.Rating != 0 {
+		product.Rating = p.Rating
+	}
+	if p.NumReviews != 0 {
+		product.NumReviews = p.NumReviews
+	}
+	if p.Price != 0 {
+		product.Price = p.Price
+	}
+	if p.CountInStock != 0 {
+		product.CountInStock = p.CountInStock
+	}
+
+	product.UpdatedAt = toTimePtr(time.Now())
+}
+
+func toTimePtr(t time.Time) *time.Time {
+	return &t
+}
+
+// orders
 func (h *handler) createOrder(w http.ResponseWriter, r *http.Request) {
 	var o OrderReq
 	if err := json.NewDecoder(r.Body).Decode(&o); err != nil {
@@ -265,64 +328,139 @@ func toOrderRes(o *storer.Order) OrderRes {
 	}
 }
 
-func toStoreProduct(p ProductReq) *storer.Product {
-	return &storer.Product{
-		Name:         p.Name,
-		Image:        p.Image,
-		Category:     p.Category,
-		Description:  p.Description,
-		Rating:       p.Rating,
-		NumReviews:   p.NumReviews,
-		Price:        p.Price,
-		CountInStock: p.CountInStock,
+// users
+func (h *handler) createUser(w http.ResponseWriter, r *http.Request) {
+	var u UserReq
+	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+		http.Error(w, "error decoding request body", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.server.CreateUser(h.ctx, toStoreUser(u))
+	if err != nil {
+		http.Error(w, "error creating product", http.StatusInternalServerError)
+		return
+	}
+
+	res := toUserRes(user)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(res)
+}
+
+func (h *handler) getUser(w http.ResponseWriter, r *http.Request) {
+	email := chi.URLParam(r, "email")
+	if email == "" {
+		http.Error(w, "Email can not be empty", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.server.GetUser(h.ctx, email)
+	if err != nil {
+		http.Error(w, "error getting product", http.StatusInternalServerError)
+		return
+	}
+
+	res := toUserRes(user)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(res)
+}
+
+func (h *handler) listUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.server.ListUsers(h.ctx)
+	if err != nil {
+		http.Error(w, "error getting product list", http.StatusInternalServerError)
+		return
+	}
+
+	var res []UserRes
+	for _, u := range users {
+		res = append(res, toUserRes(&u))
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(res)
+}
+
+func (h *handler) updateUser(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	i, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		http.Error(w, "error parsing ID", http.StatusBadRequest)
+		return
+	}
+
+	var u UserReq
+	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+		http.Error(w, "error decoding request body", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.server.GetUserById(h.ctx, i)
+	if err != nil {
+		http.Error(w, "error getting user", http.StatusInternalServerError)
+		return
+	}
+
+	// patch user request
+	patchUserReq(user, u)
+	updated, err := h.server.UpdateUser(h.ctx, user)
+	if err != nil {
+		http.Error(w, "error updating user", http.StatusInternalServerError)
+		return
+	}
+
+	res := toUserRes(updated)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(res)
+}
+
+func (h *handler) deleteUser(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	i, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		http.Error(w, "error parsing ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.server.DeleteUser(h.ctx, i); err != nil {
+		http.Error(w, "error deleting user", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func toStoreUser(u UserReq) *storer.User {
+	return &storer.User{
+		Name:     u.Name,
+		Email:    u.Email,
+		Password: u.Password,
+		IsAdmin:  u.IsAdmin,
 	}
 }
 
-func toProductRes(p *storer.Product) ProductRes {
-	return ProductRes{
-		ID:           p.ID,
-		Name:         p.Name,
-		Image:        p.Image,
-		Category:     p.Category,
-		Description:  p.Description,
-		Rating:       p.Rating,
-		NumReviews:   p.NumReviews,
-		Price:        p.Price,
-		CountInStock: p.CountInStock,
-		CreatedAt:    p.CreatedAt,
-		UpdatedAt:    p.UpdatedAt,
+func toUserRes(u *storer.User) UserRes {
+	return UserRes{
+		Name:    u.Name,
+		Email:   u.Email,
+		IsAdmin: u.IsAdmin,
 	}
 }
 
-func patchProductReq(product *storer.Product, p ProductReq) {
-	if p.Name != "" {
-		product.Name = p.Name
+func patchUserReq(user *storer.User, u UserReq) {
+	if u.Name != "" {
+		user.Name = u.Name
 	}
-	if p.Image != "" {
-		product.Image = p.Image
+	if u.Email != "" {
+		user.Email = u.Email
 	}
-	if p.Category != "" {
-		product.Category = p.Category
+	if u.Password != "" {
+		user.Password = u.Password
 	}
-	if p.Description != "" {
-		product.Description = p.Description
-	}
-	if p.Rating != 0 {
-		product.Rating = p.Rating
-	}
-	if p.NumReviews != 0 {
-		product.NumReviews = p.NumReviews
-	}
-	if p.Price != 0 {
-		product.Price = p.Price
-	}
-	if p.CountInStock != 0 {
-		product.CountInStock = p.CountInStock
-	}
-
-	product.UpdatedAt = toTimePtr(time.Now())
-}
-
-func toTimePtr(t time.Time) *time.Time {
-	return &t
+	user.IsAdmin = u.IsAdmin || false
+	user.UpdatedAt = toTimePtr(time.Now())
 }
