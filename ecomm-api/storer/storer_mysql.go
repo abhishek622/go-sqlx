@@ -237,15 +237,6 @@ func (ms *MySQLStorer) GetUser(ctx context.Context, email string) (*User, error)
 
 	return &u, nil
 }
-func (ms *MySQLStorer) GetUserById(ctx context.Context, id int64) (*User, error) {
-	var u User
-	err := ms.db.GetContext(ctx, &u, "SELECT * FROM users where id=?", id)
-	if err != nil {
-		return nil, fmt.Errorf("Error getting user: %w", err)
-	}
-
-	return &u, nil
-}
 
 func (ms *MySQLStorer) ListUsers(ctx context.Context) ([]User, error) {
 	var users []User

@@ -9,18 +9,22 @@ import (
 
 	"github.com/abhishek622/go-sqlx/ecomm-api/server"
 	"github.com/abhishek622/go-sqlx/ecomm-api/storer"
+	"github.com/abhishek622/go-sqlx/token"
+	"github.com/abhishek622/go-sqlx/util"
 	"github.com/go-chi/chi"
 )
 
 type handler struct {
-	ctx    context.Context
-	server *server.Server
+	ctx        context.Context
+	server     *server.Server
+	tokenMaker *token.JWTMaker
 }
 
-func NewHandler(server *server.Server) *handler {
+func NewHandler(server *server.Server, secretKey string) *handler {
 	return &handler{
-		ctx:    context.Background(),
-		server: server,
+		ctx:        context.Background(),
+		server:     server,
+		tokenMaker: token.NewJWTMaker(secretKey),
 	}
 }
 
@@ -336,6 +340,13 @@ func (h *handler) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hashed, err := util.HashPassword(u.Password)
+	if err != nil {
+		http.Error(w, "error hashing password", http.StatusBadRequest)
+		return
+	}
+
+	u.Password = hashed
 	user, err := h.server.CreateUser(h.ctx, toStoreUser(u))
 	if err != nil {
 		http.Error(w, "error creating product", http.StatusInternalServerError)
@@ -345,25 +356,6 @@ func (h *handler) createUser(w http.ResponseWriter, r *http.Request) {
 	res := toUserRes(user)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(res)
-}
-
-func (h *handler) getUser(w http.ResponseWriter, r *http.Request) {
-	email := chi.URLParam(r, "email")
-	if email == "" {
-		http.Error(w, "Email can not be empty", http.StatusBadRequest)
-		return
-	}
-
-	user, err := h.server.GetUser(h.ctx, email)
-	if err != nil {
-		http.Error(w, "error getting product", http.StatusInternalServerError)
-		return
-	}
-
-	res := toUserRes(user)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(res)
 }
 
@@ -385,20 +377,13 @@ func (h *handler) listUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) updateUser(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	i, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
-		http.Error(w, "error parsing ID", http.StatusBadRequest)
-		return
-	}
-
 	var u UserReq
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
 		http.Error(w, "error decoding request body", http.StatusBadRequest)
 		return
 	}
 
-	user, err := h.server.GetUserById(h.ctx, i)
+	user, err := h.server.GetUser(h.ctx, u.Email)
 	if err != nil {
 		http.Error(w, "error getting user", http.StatusInternalServerError)
 		return
@@ -459,8 +444,54 @@ func patchUserReq(user *storer.User, u UserReq) {
 		user.Email = u.Email
 	}
 	if u.Password != "" {
-		user.Password = u.Password
+		hashed, err := util.HashPassword(u.Password)
+		if err != nil {
+			panic(err)
+		}
+		user.Password = hashed
 	}
-	user.IsAdmin = u.IsAdmin || false
+	if u.IsAdmin {
+		user.IsAdmin = u.IsAdmin
+	}
 	user.UpdatedAt = toTimePtr(time.Now())
+}
+
+// login user
+func (h *handler) loginUser(w http.ResponseWriter, r *http.Request) {
+	var u LoginUserReq
+	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+		http.Error(w, "Error decoding request body", http.StatusBadRequest)
+		return
+	}
+
+	gu, err := h.server.GetUser(h.ctx, u.Email)
+	if err != nil {
+		http.Error(w, "Error getting user", http.StatusInternalServerError)
+		return
+	}
+
+	err = util.CheckPassword(u.Password, gu.Password)
+	if err != nil {
+		http.Error(w, "Wrong password", http.StatusInternalServerError)
+		return
+	}
+
+	accessToken, _, err := h.tokenMaker.CreateToken(gu.ID, gu.Email, gu.IsAdmin, 15*time.Minute)
+	if err != nil {
+		http.Error(w, "error creating token", http.StatusInternalServerError)
+		return
+	}
+
+	res := LoginUserRes{
+		AccessToken: accessToken,
+		User: UserRes{
+			Name:    gu.Name,
+			Email:   gu.Email,
+			IsAdmin: gu.IsAdmin,
+		},
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(res)
 }

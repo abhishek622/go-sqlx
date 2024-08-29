@@ -62,10 +62,6 @@ func (s *Server) GetUser(ctx context.Context, email string) (*storer.User, error
 	return s.storer.GetUser(ctx, email)
 }
 
-func (s *Server) GetUserById(ctx context.Context, id int64) (*storer.User, error) {
-	return s.storer.GetUserById(ctx, id)
-}
-
 func (s *Server) ListUsers(ctx context.Context) ([]storer.User, error) {
 	return s.storer.ListUsers(ctx)
 }
