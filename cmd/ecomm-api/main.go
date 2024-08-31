@@ -3,32 +3,38 @@ package main
 import (
 	"log"
 
-	"github.com/abhishek622/go-sqlx/db"
 	"github.com/abhishek622/go-sqlx/ecomm-api/handler"
-	"github.com/abhishek622/go-sqlx/ecomm-api/server"
-	"github.com/abhishek622/go-sqlx/ecomm-api/storer"
+	"github.com/abhishek622/go-sqlx/ecomm-grpc/pb"
 	"github.com/ianschenck/envflag"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const minSecretKeySize = 32
 
 func main() {
-	var secretKey = envflag.String("SECRET_KEY", "01234567890123456789012345678901", "secret key for JWT signing")
+	var (
+		secretKey = envflag.String("SECRET_KEY", "01234567890123456789012345678901", "secret key for JWT signing")
+		svcAddr   = envflag.String("GRPC_SVC_ADDR", "0.0.0.0:9091", "address where the ecomm-grpc service is listening on")
+	)
+
 	if len(*secretKey) < minSecretKeySize {
-		log.Fatal("SECRET_KEY must be at least %d characters", minSecretKeySize)
+		log.Fatalf("SECRET_KEY must be at least %d characters", minSecretKeySize)
 	}
 
-	db, err := db.NewDatabase()
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	conn, err := grpc.NewClient(*svcAddr, opts...)
 	if err != nil {
-		log.Fatal("Error opening database: %v", err)
+		log.Fatalf("failed to connect to server: %v", err)
 	}
+	defer conn.Close()
 
-	defer db.Close()
-	log.Println("Successfully connected to DB....")
-
-	st := storer.NewMySQLStorer(db.GetDB())
-	srv := server.NewServer(st)
-	hdl := handler.NewHandler(srv, *secretKey)
+	client := pb.NewEcommClient(conn)
+	hdl := handler.NewHandler(client, *secretKey)
 	handler.RegisterRoutes(hdl)
 	handler.Start(":8080")
+	log.Printf("API listening to PORT: 8080....")
 }

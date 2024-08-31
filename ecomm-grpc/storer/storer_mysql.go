@@ -50,8 +50,8 @@ func (ms *MySQLStorer) GetProduct(ctx context.Context, id int64) (*Product, erro
 	return &p, nil
 }
 
-func (ms *MySQLStorer) ListProducts(ctx context.Context) ([]Product, error) {
-	var products []Product
+func (ms *MySQLStorer) ListProducts(ctx context.Context) ([]*Product, error) {
+	var products []*Product
 	err := ms.db.SelectContext(ctx, &products, "SELECT * FROM products")
 	if err != nil {
 		return nil, fmt.Errorf("Error listing products: %w", err)
@@ -91,6 +91,7 @@ func (ms *MySQLStorer) DeleteProduct(ctx context.Context, id int64) error {
 	return nil
 }
 
+// order
 func (ms *MySQLStorer) CreateOrder(ctx context.Context, o *Order) (*Order, error) {
 	err := ms.execTx(ctx, func(tx *sqlx.Tx) error {
 		// insert into order
@@ -117,7 +118,7 @@ func (ms *MySQLStorer) CreateOrder(ctx context.Context, o *Order) (*Order, error
 }
 
 func createOrder(ctx context.Context, tx *sqlx.Tx, o *Order) (*Order, error) {
-	res, err := tx.NamedExecContext(ctx, "INSERT INTO orders (payment_method, tax_price, shipping_price, total_price) VALUES (:payment_method, :tax_price, :shipping_price, :total_price)", o)
+	res, err := tx.NamedExecContext(ctx, "INSERT INTO orders (payment_method, tax_price, shipping_price, total_price, user_id) VALUES (:payment_method, :tax_price, :shipping_price, :total_price, :user_id)", o)
 	if err != nil {
 		return nil, fmt.Errorf("Error inserting order: %w", err)
 	}
@@ -148,15 +149,15 @@ func createOrderItem(ctx context.Context, tx *sqlx.Tx, oi OrderItem) error {
 	return nil
 }
 
-func (ms *MySQLStorer) GetOrder(ctx context.Context, id int64) (*Order, error) {
+func (ms *MySQLStorer) GetOrder(ctx context.Context, userID int64) (*Order, error) {
 	var o Order
-	err := ms.db.GetContext(ctx, &o, "SELECT * FROM orders WHERE id=?", id)
+	err := ms.db.GetContext(ctx, &o, "SELECT * FROM orders WHERE user_id=?", userID)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting order: %w", err)
 	}
 
 	var items []OrderItem
-	err = ms.db.SelectContext(ctx, &items, "SELECT * FROM order_items WHERE order_id=?", id)
+	err = ms.db.SelectContext(ctx, &items, "SELECT * FROM order_items WHERE order_id=?", o.ID)
 	if err != nil {
 		return nil, fmt.Errorf("Error getting order items: %w", err)
 	}
@@ -165,8 +166,18 @@ func (ms *MySQLStorer) GetOrder(ctx context.Context, id int64) (*Order, error) {
 	return &o, nil
 }
 
-func (ms *MySQLStorer) ListOrders(ctx context.Context) ([]Order, error) {
-	var orders []Order
+func (ms *MySQLStorer) GetOrderStatusByID(ctx context.Context, id int64) (*Order, error) {
+	var o Order
+	err := ms.db.GetContext(ctx, &o, "SELECT id, user_id, status FROM orders WHERE id=?", id)
+	if err != nil {
+		return nil, fmt.Errorf("error getting order: %w", err)
+	}
+
+	return &o, nil
+}
+
+func (ms *MySQLStorer) ListOrders(ctx context.Context) ([]*Order, error) {
+	var orders []*Order
 	err := ms.db.SelectContext(ctx, &orders, "SELECT * FROM orders")
 	if err != nil {
 		return nil, fmt.Errorf("Error listing orders: %w", err)
@@ -182,6 +193,15 @@ func (ms *MySQLStorer) ListOrders(ctx context.Context) ([]Order, error) {
 	}
 
 	return orders, nil
+}
+
+func (ms *MySQLStorer) UpdateOrderStatus(ctx context.Context, o *Order) (*Order, error) {
+	_, err := ms.db.NamedExecContext(ctx, "UPDATE orders SET status=:status, updated_at=:updated_at WHERE id=?", o)
+	if err != nil {
+		return nil, fmt.Errorf("error updating order status: %w", err)
+	}
+
+	return o, nil
 }
 
 func (ms *MySQLStorer) DeleteOrder(ctx context.Context, id int64) error {
@@ -238,8 +258,8 @@ func (ms *MySQLStorer) GetUser(ctx context.Context, email string) (*User, error)
 	return &u, nil
 }
 
-func (ms *MySQLStorer) ListUsers(ctx context.Context) ([]User, error) {
-	var users []User
+func (ms *MySQLStorer) ListUsers(ctx context.Context) ([]*User, error) {
+	var users []*User
 	err := ms.db.SelectContext(ctx, &users, "SELECT * FROM users")
 	if err != nil {
 		return nil, fmt.Errorf("Error listing users: %w", err)

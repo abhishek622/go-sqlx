@@ -1,7 +1,13 @@
 ## Docker command used
 
-- `docker run -it --rm  --network host --volume "$(pwd)/db:/db"  migrate/migrate:latest create -ext sql -dir /db/migrations init_schema`
+create mysql container in docker -
+`docker run --name project1-mysql -p 3307:3306 -e MYSQL_ROOT_PASSWORD=password -d mysql:9.0.1`
 
-- `docker exec -i project1-mysql mysql -u<USERNAME> -p<PASSWORD><<< "CREATE DATABASE ecomm;"`
+create database ecomm -
+`docker exec -i project1-mysql mysql -uroot -ppassword<<< "CREATE DATABASE ecomm;"`
 
-- `docker run -it --rm --network host --volume "$(pwd)/db:/db" migrate/migrate:latest -source file://db/migrations -database "mysql://root:password@tcp(host.docker.internal:3307)/ecomm" up`
+create migrations -
+`docker run -it --rm  --network host --volume "$(pwd)/db:/db"  migrate/migrate:latest create -ext sql -dir /db/migrations init_schema`
+
+run migration -
+`docker run -it --rm --network host --volume ./db:/db migrate/migrate:latest -path=/db/migrations -database "mysql://root:password@tcp(localhost:3307)/ecomm" up`
