@@ -11,3 +11,11 @@ create migrations -
 
 run migration -
 `docker run -it --rm --network host --volume ./db:/db migrate/migrate:latest -path=/db/migrations -database "mysql://root:password@tcp(localhost:3307)/ecomm" up`
+
+proto cmd to compile new proto definition
+
+```
+protoc --proto_path=ecomm-grpc/pb --go_out=ecomm-grpc/pb --go_opt=paths=source_relative \
+    --go-grpc_out=ecomm-grpc/pb --go-grpc_opt=paths=source_relative \
+    ecomm-grpc/pb/api.proto
+```

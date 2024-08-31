@@ -19,27 +19,27 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Ecomm_CreateProduct_FullMethodName           = "/pd.ecomm/CreateProduct"
-	Ecomm_GetProduct_FullMethodName              = "/pd.ecomm/GetProduct"
-	Ecomm_ListProducts_FullMethodName            = "/pd.ecomm/ListProducts"
-	Ecomm_UpdateProduct_FullMethodName           = "/pd.ecomm/UpdateProduct"
-	Ecomm_DeleteProduct_FullMethodName           = "/pd.ecomm/DeleteProduct"
-	Ecomm_CreateOrder_FullMethodName             = "/pd.ecomm/CreateOrder"
-	Ecomm_GetOrder_FullMethodName                = "/pd.ecomm/GetOrder"
-	Ecomm_ListOrders_FullMethodName              = "/pd.ecomm/ListOrders"
-	Ecomm_UpdateOrderStatus_FullMethodName       = "/pd.ecomm/UpdateOrderStatus"
-	Ecomm_DeleteOrder_FullMethodName             = "/pd.ecomm/DeleteOrder"
-	Ecomm_CreateUser_FullMethodName              = "/pd.ecomm/CreateUser"
-	Ecomm_GetUser_FullMethodName                 = "/pd.ecomm/GetUser"
-	Ecomm_ListUsers_FullMethodName               = "/pd.ecomm/ListUsers"
-	Ecomm_UpdateUser_FullMethodName              = "/pd.ecomm/UpdateUser"
-	Ecomm_DeleteUser_FullMethodName              = "/pd.ecomm/DeleteUser"
-	Ecomm_CreateSession_FullMethodName           = "/pd.ecomm/CreateSession"
-	Ecomm_GetSession_FullMethodName              = "/pd.ecomm/GetSession"
-	Ecomm_RevokeSession_FullMethodName           = "/pd.ecomm/RevokeSession"
-	Ecomm_DeleteSession_FullMethodName           = "/pd.ecomm/DeleteSession"
-	Ecomm_ListNotificationEvents_FullMethodName  = "/pd.ecomm/ListNotificationEvents"
-	Ecomm_UpdateNotificationEvent_FullMethodName = "/pd.ecomm/UpdateNotificationEvent"
+	Ecomm_CreateProduct_FullMethodName           = "/pb.ecomm/CreateProduct"
+	Ecomm_GetProduct_FullMethodName              = "/pb.ecomm/GetProduct"
+	Ecomm_ListProducts_FullMethodName            = "/pb.ecomm/ListProducts"
+	Ecomm_UpdateProduct_FullMethodName           = "/pb.ecomm/UpdateProduct"
+	Ecomm_DeleteProduct_FullMethodName           = "/pb.ecomm/DeleteProduct"
+	Ecomm_CreateOrder_FullMethodName             = "/pb.ecomm/CreateOrder"
+	Ecomm_GetOrder_FullMethodName                = "/pb.ecomm/GetOrder"
+	Ecomm_ListOrders_FullMethodName              = "/pb.ecomm/ListOrders"
+	Ecomm_UpdateOrderStatus_FullMethodName       = "/pb.ecomm/UpdateOrderStatus"
+	Ecomm_DeleteOrder_FullMethodName             = "/pb.ecomm/DeleteOrder"
+	Ecomm_CreateUser_FullMethodName              = "/pb.ecomm/CreateUser"
+	Ecomm_GetUser_FullMethodName                 = "/pb.ecomm/GetUser"
+	Ecomm_ListUsers_FullMethodName               = "/pb.ecomm/ListUsers"
+	Ecomm_UpdateUser_FullMethodName              = "/pb.ecomm/UpdateUser"
+	Ecomm_DeleteUser_FullMethodName              = "/pb.ecomm/DeleteUser"
+	Ecomm_CreateSession_FullMethodName           = "/pb.ecomm/CreateSession"
+	Ecomm_GetSession_FullMethodName              = "/pb.ecomm/GetSession"
+	Ecomm_RevokeSession_FullMethodName           = "/pb.ecomm/RevokeSession"
+	Ecomm_DeleteSession_FullMethodName           = "/pb.ecomm/DeleteSession"
+	Ecomm_ListNotificationEvents_FullMethodName  = "/pb.ecomm/ListNotificationEvents"
+	Ecomm_UpdateNotificationEvent_FullMethodName = "/pb.ecomm/UpdateNotificationEvent"
 )
 
 // EcommClient is the client API for Ecomm service.
@@ -788,7 +788,7 @@ func _Ecomm_UpdateNotificationEvent_Handler(srv interface{}, ctx context.Context
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Ecomm_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "pd.ecomm",
+	ServiceName: "pb.ecomm",
 	HandlerType: (*EcommServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
