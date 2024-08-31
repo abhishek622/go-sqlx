@@ -29,11 +29,13 @@ type ProductRes struct {
 }
 
 type OrderReq struct {
+	ID            int64        `json:"id"`
 	Items         []*OrderItem `json:"items"`
 	PaymentMethod string       `json:"payment_method"`
 	TaxPrice      float32      `json:"tax_price"`
 	ShippingPrice float32      `json:"shipping_price"`
 	TotalPrice    float32      `json:"total_price"`
+	Status        string       `json:"status"`
 }
 
 type OrderItem struct {
@@ -53,6 +55,7 @@ type OrderRes struct {
 	TotalPrice    float32      `json:"total_price"`
 	CreatedAt     time.Time    `json:"created_at"`
 	UpdatedAt     *time.Time   `json:"updated_at"`
+	Status        string       `json:"status"`
 }
 
 type UserReq struct {
